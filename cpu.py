@@ -66,7 +66,6 @@ class CPU:
         self.registers = [0] * 8  # registers 0:7 are saved for quick access
         self.registers[7] = 0xF4  # 244
         self.pc = 0  # program counter/pointer
-        self.flag = 0
         self.flag_E = 0
         self.flag_G = 0
         self.flag_L = 0
@@ -125,6 +124,7 @@ class CPU:
     def alu(self, op, op_a, op_b):
         """ALU operations."""
 
+        # MATH OPERATOR:
         if op == ADD:
             self.registers[op_a] += self.registers[op_b]
         elif op == MULT:
@@ -134,40 +134,49 @@ class CPU:
         elif op == DIV:
             try:
                 self.registers[op_a] /= self.registers[op_b]
-            except:
-            # except ZeroDivisionError:
+            except ZeroDivisionError:
                 print('You cannot divide by zero')
-                sys.exit()
+                sys.exit(1)
         elif op == MOD:
             try:
                 self.registers[op_a] = self.registers[op_a] % self.registers[op_b]
-            except:
-            # except ZeroDivisionError:
+            except ZeroDivisionError:
                 print('You cannot divide by zero')
-                sys.exit()
+                sys.exit(1)
         elif op == INC:
             self.registers[op_a] -= self.registers[op_b]
         elif op == DEC:
             self.registers[op_a] -= self.registers[op_b]
 
+        # COMPARING REGISTERS:
         elif op == CMP:
             reg_a = self.registers[op_a]
             reg_b = self.registers[op_b]
             self.flag_E = 0
             self.flag_G = 0
             self.flag_L = 0
-            # print('cmp: ', op_a, reg_a, op_b, reg_b)
             if reg_a < reg_b:
-                self.flag = FL_L  # less-than flag
                 self.flag_L = 1
             elif reg_a > reg_b:
-                self.flag = FL_G  # greater-than flag
                 self.flag_G = 1
             elif reg_a == reg_b:
-                self.flag = FL_E  # equal-to flag
                 self.flag_E = 1
 
-            # print('alu cmp flags: ', self.flag_E, self.flag_G, self.flag_L)
+        # LOGICAL OPERATORS:
+        elif op == AND:
+            self.registers[op_a] = (self.registers[op_a] & self.registers[op_b])
+        elif op == OR:
+            self.registers[op_a] = (self.registers[op_a] | self.registers[op_b])
+        elif op == XOR:
+            self.registers[op_a] = (self.registers[op_a] ^ self.registers[op_b])
+        elif op == NOT:
+            self.registers[op_a] = (self.registers[op_a] != self.registers[op_b])
+        elif op == SHL:
+            # shift the value in registerA by bits in registerB, left:
+            self.registers[op_a] = (self.registers[op_a] << self.registers[op_b])
+        elif op == AND:
+            # shift the value in registerA by bits in registerB, to the right:
+            self.registers[op_a] = (self.registers[op_a] >> self.registers[op_b])
 
         else:
             raise Exception(f"Unsupported ALU operation: {op}")
@@ -219,8 +228,6 @@ class CPU:
             num_args = IR >> 6
             is_alu_op = ((IR >> 5) & 0b001) == 1
 
-            # print("IR: ", IR, operand_a, operand_b, self.pc)
-
             # BranchTable implementation
             if is_alu_op:
                 self.alu(IR, operand_a, operand_b)
@@ -237,6 +244,8 @@ class CPU:
                 self.pc += 1 + num_args
 
     # Branch Table Commands
+    def ld(self, operand_a, operand_b):
+        self.registers[operand_a] = self.registers[operand_b]
 
     def ldi(self, operand_a, operand_b):   # LOAD
         # LOAD the value into the register location
@@ -302,15 +311,29 @@ class CPU:
         self.pc = self.registers[operand_a]
 
     def jeq(self, operand_a, operand_b):
-        # if self.flag == FL_E:   # Equal flag
         if self.flag_E == 1:
             self.pc = self.registers[operand_a]
         else:
             self.pc += 2
 
     def jne(self, operand_a, operand_b):
-        # if self.flag != FL_E:   # Equal flag
         if self.flag_E == 0:
             self.pc = self.registers[operand_a]
         else:
             self.pc += 2
+
+    def jgt(self, operand_a, operand_b):
+        # if greater-than flag is true: jump
+        pass
+
+    def jlt(self, operand_a, operand_b):
+        # if less-than flag is true: jump
+        pass
+
+    def jle(self, operand_a, operand_b):
+        # if less-than flag, or equal flag is true: jump
+        pass
+
+    def jge(self, operand_a, operand_b):
+        # if greater-than flag, or equal flag is true: jump
+        pass

@@ -67,6 +67,9 @@ class CPU:
         self.registers[7] = 0xF4  # 244
         self.pc = 0  # program counter/pointer
         self.flag = 0
+        self.flag_E = 0
+        self.flag_G = 0
+        self.flag_L = 0
         self.running = False
 
         # ____Branch Tables____
@@ -150,14 +153,21 @@ class CPU:
         elif op == CMP:
             reg_a = self.registers[op_a]
             reg_b = self.registers[op_b]
+            self.flag_E = 0
+            self.flag_G = 0
+            self.flag_L = 0
+            # print('cmp: ', op_a, reg_a, op_b, reg_b)
             if reg_a < reg_b:
                 self.flag = FL_L  # less-than flag
+                self.flag_L = 1
             elif reg_a > reg_b:
                 self.flag = FL_G  # greater-than flag
-            elif reg_a == FL_E:
+                self.flag_G = 1
+            elif reg_a == reg_b:
                 self.flag = FL_E  # equal-to flag
+                self.flag_E = 1
 
-            print('alu cmp', self.flag)
+            # print('alu cmp flags: ', self.flag_E, self.flag_G, self.flag_L)
 
         else:
             raise Exception(f"Unsupported ALU operation: {op}")
@@ -209,7 +219,7 @@ class CPU:
             num_args = IR >> 6
             is_alu_op = ((IR >> 5) & 0b001) == 1
 
-            print("IR: ", IR)
+            # print("IR: ", IR, operand_a, operand_b, self.pc)
 
             # BranchTable implementation
             if is_alu_op:
@@ -239,6 +249,7 @@ class CPU:
     def hlt(self, operand_a, operand_b):
         # Exit Loop
         self.running = False
+        # print('ram: ', self.ram)
 
     def push(self, operand_a, operand_b):
         # **SP = Stack Pointer, similar to self.pc but with different function
@@ -287,37 +298,19 @@ class CPU:
 
         self.registers[7] += 1
 
-    def cmp(self, operand_a, operand_b):
-        # 'flag' bits => FL_{L, G, or E} = 1 if:
-        # L (less-than) = registerA > registerB
-        # G (greater-than) = registerA < registerB
-        # E (equal-to) = registerA == registerB
-        reg_a = self.registers[operand_a]
-        reg_b = self.registers[operand_b]
-        print('cmp', self.flag)
-        if reg_a < reg_b:
-            self.flag = 1    # less-than flag
-        elif reg_a > reg_b:
-            self.flag = 1    # greater-than flag
-        elif reg_a == reg_b:
-            self.flag = 1    # equal-to flag
-        else:
-            print('either a or b are invalid')
-
     def jmp(self, operand_a, operand_b):
         self.pc = self.registers[operand_a]
-        print('jmp', operand_a, self.pc)
 
     def jeq(self, operand_a, operand_b):
-        if self.flag == FL_E:   # Equal flag
+        # if self.flag == FL_E:   # Equal flag
+        if self.flag_E == 1:
             self.pc = self.registers[operand_a]
         else:
             self.pc += 2
-        print('jeq')
 
     def jne(self, operand_a, operand_b):
-        if self.flag != FL_E:   # Equal flag
+        # if self.flag != FL_E:   # Equal flag
+        if self.flag_E == 0:
             self.pc = self.registers[operand_a]
-        # else:
-        #     self.pc += 2
-        print('jne')
+        else:
+            self.pc += 2
